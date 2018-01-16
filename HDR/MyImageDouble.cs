@@ -34,11 +34,9 @@ namespace HDR
 
         public MyImage ToMyImage()
         {
-            MyImage myImage = new MyImage(width, height, numCh, 0.0);
-            for (int y = 0; y < height; ++y)
-                for (int x = 0; x < width; ++x)
-                    for (int ch = 0; ch < numCh; ++ch)
-                        myImage.bitplane[ch].SetPixel(x, y, (byte)Math.Round(bitplane[ch].GetPixel(x, y)));
+            MyImage myImage = new MyImage(width, height, numCh, exposureTime);
+            for (int ch = 0; ch < numCh; ++ch)
+                myImage.bitplane[ch] = bitplane[ch].ToMyBitplane();
             return myImage;
         }
 

@@ -15,9 +15,9 @@ namespace HDR
             height = bitplane.height;
 
             data = new double[height, width];
-            for (int y = 0; y < this.height; ++y)
-                for (int x = 0; x < this.width; ++x)
-                    SetPixel(x, y, (double)bitplane.GetPixel(x, y));
+            for (int y = 0; y < height; ++y)
+                for (int x = 0; x < width; ++x)
+                    SetPixel(x, y, bitplane.GetPixel(x, y));
         }
 
         public MyBitplaneDouble(int w, int h)
@@ -78,7 +78,7 @@ namespace HDR
             double max = Double.MinValue;
             for (int y = 0; y < height; ++y)
                 for (int x = 0; x < width; ++x)
-                    if (max < GetPixel(x, y))
+                    if (GetPixel(x, y).CompareTo(max) > 0)
                         max = GetPixel(x, y);
             return max;
         }
@@ -88,9 +88,18 @@ namespace HDR
             double min = Double.MaxValue;
             for (int y = 0; y < height; ++y)
                 for (int x = 0; x < width; ++x)
-                    if (min > GetPixel(x, y))
+                    if (GetPixel(x, y).CompareTo(min) < 0)
                         min = GetPixel(x, y);
             return min;
+        }
+
+        public MyBitplane ToMyBitplane()
+        {
+            MyBitplane myBitplane = new MyBitplane(width, height);
+            for (int y = 0; y < height; ++y)
+                for (int x = 0; x < width; ++x)
+                        myBitplane.SetPixel(x, y, (byte)Math.Round(GetPixel(x, y)));
+            return myBitplane;
         }
     }
 }

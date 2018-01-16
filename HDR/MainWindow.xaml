@@ -7,7 +7,7 @@
         mc:Ignorable="d"
         Title="HDR" Height="647" Width="1425.25" WindowStartupLocation="CenterScreen" WindowStyle="ToolWindow">
     <Grid>
-        <Button Content="HDR" HorizontalAlignment="Left" VerticalAlignment="Top" Width="210" Click="Button_Click"/>
+        <Button x:Name="buttonHDR" Content="HDR" HorizontalAlignment="Left" VerticalAlignment="Top" Width="210" Click="buttonHDR_Click"/>
         <ScrollViewer HorizontalAlignment="Left" Height="600" Margin="0,20,0,0" VerticalAlignment="Top" Width="210" CanContentScroll="True">
             <StackPanel x:Name="stackImages" Height="600" Width="194"/>
         </ScrollViewer>

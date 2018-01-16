@@ -99,13 +99,13 @@ namespace HDR
         public Pixel[] getSamples(int count, int[] randomX, int[] randomY)
         {
             Pixel[] sample = new Pixel[count];            
-            for (int j = 0; j < count; ++j)
+            for (int i = 0; i < count; ++i)
             {
-                byte R = bitplane[2].GetPixel(randomX[j], randomY[j]);
-                byte G = bitplane[1].GetPixel(randomX[j], randomY[j]);
-                byte B = bitplane[0].GetPixel(randomX[j], randomY[j]);
+                byte R = bitplane[2].GetPixel(randomX[i], randomY[i]);
+                byte G = bitplane[1].GetPixel(randomX[i], randomY[i]);
+                byte B = bitplane[0].GetPixel(randomX[i], randomY[i]);
 
-                sample[j] = new Pixel(B, G, R);
+                sample[i] = new Pixel(R, G, B);
             }
             return sample;
         }

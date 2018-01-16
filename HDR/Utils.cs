@@ -6,22 +6,11 @@ using System.Text;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using CenterSpace.NMath.Core;
 
 namespace HDR
 {
     public class Utils
     {
-        public static double[] solveSVD(double[,] A, double[] b)
-        {
-            var AA = new DoubleMatrix(A);
-            var bb = new DoubleVector(b);
-            var lsq = new DoubleLeastSquares(AA, bb, true);                      
-
-            return lsq.X.ToArray();          
-            // return runit(A, b);
-        }
-
         public static double[] runit(double[][] A, double[] b)
         {
             File.WriteAllText("ASize.txt", A.Length.ToString() + "\n" + A[0].Length.ToString());

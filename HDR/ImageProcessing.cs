@@ -1,14 +1,15 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using CenterSpace.NMath.Core;
+using System;
 using System.Threading.Tasks;
 
 namespace HDR
 {
     class ImageProcessing
     {
-        internal static HDResult HDR(List<MyImage> images, int smoothfactor, int samples)
+        internal static HDResult HDR(MyImage[] images, int smoothfactor, int samples)
         {
             // Prepare data
+            int imagesCount = images.Length;
             int width = images[0].width;
             int height = images[0].height;
             int numCh = images[0].numCh;
@@ -24,9 +25,9 @@ namespace HDR
             }
 
             // Get sample pixels and exposure time
-            Pixel[][] imagesSamples = new Pixel[images.Count][];
-            double[] exposureTime = new double[images.Count];
-            for (int i = 0; i < images.Count; ++i)
+            Pixel[][] imagesSamples = new Pixel[imagesCount][];
+            double[] exposureTime = new double[imagesCount];
+            for (int i = 0; i < imagesCount; ++i)
             {
                 imagesSamples[i] = images[i].getSamples(samples, randomX, randomY);
                 exposureTime[i] = images[i].exposureTime;
@@ -51,31 +52,29 @@ namespace HDR
         private static MyBitplaneDouble RadianceMap(MyImageDouble[] imagesChannels, double[] response, int width, int height, int numCh)
         {
             MyBitplaneDouble radianceMap = new MyBitplaneDouble(width, height);
+            int imageSize = imagesChannels.Length;
 
             for (int x = 0; x < width; ++x)
                 for (int y = 0; y < height; ++y)
                 {
                     // Prepare data
-                    List<double> g = new List<double>();
-                    List<double> w = new List<double>();
+                    double[] g = new double[imageSize];
+                    double[] w = new double[imageSize];
 
-                    for (int i = 0; i < imagesChannels.Length; ++i)
+                    for (int i = 0; i < imageSize; ++i)
                     {
-                        g.Add(response[(int)imagesChannels[i].bitplane[0].GetPixel(x, y)]);
-                        w.Add(W(imagesChannels[i].bitplane[0].GetPixel(x, y)));
+                        g[i] = response[(int)imagesChannels[i].bitplane[0].GetPixel(x, y)];
+                        w[i] = W(imagesChannels[i].bitplane[0].GetPixel(x, y));
                     }
 
                     double sumW = sum(w);
                     double[] logTimes = logExpoTimes(imagesChannels);
 
                     if (sumW > 0)
-                    {
-                        int size = logTimes.Length;
-                        radianceMap.SetPixel(x, y, sumMatrix(size, multiply(w, size, divide(sumW, size, minus(g, logTimes, size)))));
-                    }
+                        radianceMap.SetPixel(x, y, sumMatrix(multiply(divide(minus(g, logTimes), sumW), w)));
                     else
                     {
-                        int middle = imagesChannels.Length / 2;
+                        int middle = imageSize / 2;
                         radianceMap.SetPixel(x, y, g[middle] - logTimes[middle]);
                     }
                 }
@@ -96,7 +95,6 @@ namespace HDR
 
             int k = 0;
             for (int i = 0; i < n; ++i)
-            {
                 for (int j = 0; j < p; ++j)
                 {
                     int z = imagesSamples[j][i].getChannel(ch);
@@ -106,7 +104,6 @@ namespace HDR
                     b[k] = wij * Math.Log(exposureTime[j]);
                     k += 1;
                 }
-            }
 
             // Limit middle value
             A[k, 128] = 1;
@@ -123,11 +120,13 @@ namespace HDR
             }
 
             // Solve SVD
-            double[] x = Utils.solveSVD(A, b);
+            var AA = new DoubleMatrix(A);
+            var bb = new DoubleVector(b);
+            var lsq = new DoubleLeastSquares(AA, bb, true);
 
             double[] g = new double[256];
             for (int i = 0; i < 256; ++i)
-                g[i] = x[i];
+                g[i] = lsq.X[i];
 
             return g;
         }
@@ -141,74 +140,61 @@ namespace HDR
             return z_max - value;
         }
 
-        private static MyImageDouble[] getChannelFromimages(List<MyImage> images, int ch)
+        private static MyImageDouble[] getChannelFromimages(MyImage[] images, int ch)
         {
-            MyImageDouble[] imagesChannels = new MyImageDouble[images.Count];
-            for (int i = 0; i < images.Count; ++i)
+            int imagesCount = images.Length;
+            MyImageDouble[] imagesChannels = new MyImageDouble[imagesCount];
+            for (int i = 0; i < imagesCount; ++i)
                 imagesChannels[i] = new MyImageDouble(images[i].bitplane[ch], images[i].exposureTime);
             return imagesChannels;
         }
 
-        private static double sum(List<double> w)
+        private static double sum(double[] x)
         {
             double sumW = 0;
-            foreach (double ww in w)
+            foreach (double ww in x)
                 sumW += ww;
             return sumW;
         }
 
-        private static double sumMatrix(int size, double[][] ww)
+        private static double sumMatrix(double[,] x)
         {
+            int size = x.GetLength(0);
             double sum = 0;
             for (int xx = 0; xx < size; ++xx)
                 for (int yy = 0; yy < size; ++yy)
-                    sum += ww[xx][yy];
+                    sum += x[xx, yy];
             return sum;
         }
 
-        private static double[][] multiply(List<double> w, int size, double[][] ggDivideSum)
+        private static double[,] multiply(double[,] x1, double[] x2)
         {
-            double[][] ww = new double[size][];
+            int size = x1.GetLength(0);
+            double[,] result = new double[size, size];
             for (int xx = 0; xx < size; ++xx)
-            {
-                ww[xx] = new double[size];
                 for (int yy = 0; yy < size; ++yy)
-                {
-                    ww[xx][yy] = ggDivideSum[xx][yy] * w[yy];
-                }
-            }
-
-            return ww;
+                    result[xx, yy] = x1[xx, yy] * x2[yy];
+            return result;
         }
 
-        private static double[][] divide(double sumW, int size, double[][] ggMinLogTimes)
+        private static double[,] divide(double[,] x1, double divider)
         {
-            double[][] ggDivideSum = new double[size][];
+            int size = x1.GetLength(0);
+            double[,] result = new double[size, size];
             for (int xx = 0; xx < size; ++xx)
-            {
-                ggDivideSum[xx] = new double[size];
                 for (int yy = 0; yy < size; ++yy)
-                {
-                    ggDivideSum[xx][yy] = ggMinLogTimes[xx][yy] / sumW;
-                }
-            }
-
-            return ggDivideSum;
+                    result[xx, yy] = x1[xx, yy] / divider;
+            return result;
         }
 
-        private static double[][] minus(List<double> g, double[] logTimes, int size)
+        private static double[,] minus(double[] x1, double[] x2)
         {
-            double[][] ggMinLogTimes = new double[size][];
+            int size = x1.Length;
+            double[,] result = new double[size, size];
             for (int xx = 0; xx < size; ++xx)
-            {
-                ggMinLogTimes[xx] = new double[size];
                 for (int yy = 0; yy < size; ++yy)
-                {
-                    ggMinLogTimes[xx][yy] = g[yy] - logTimes[yy];
-                }
-            }
-
-            return ggMinLogTimes;
+                    result[xx, yy] = x1[yy] - x2[yy];
+            return result;
         }
 
         private static double[] logExpoTimes(MyImageDouble[] imagesChannels)
