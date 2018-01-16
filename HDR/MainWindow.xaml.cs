@@ -73,6 +73,8 @@ namespace HDR
             if (HDRImage == null)
                 System.Windows.MessageBox.Show("No HDR image generated", "Error", MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
 
+            var watch = System.Diagnostics.Stopwatch.StartNew();
+
             // Get parameters
             int windowSize = (int)getParamater(textboxAHEWindowSize);
             double contrastLimit = getParamater(textboxClipLimit);
@@ -94,6 +96,11 @@ namespace HDR
 
             // Draw image on screen
             processedImage.Source = Utils.getSource(myImage.GetBitmap());
+
+            watch.Stop();
+            string timeTaken = String.Format(" CLAHE {0} ms", watch.ElapsedMilliseconds.ToString());
+            Console.WriteLine(timeTaken);
+            labelOutput.Content += timeTaken;
         }
 
         private MyImage[] loadImages(string[] fileNames)
