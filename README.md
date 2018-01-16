@@ -7,6 +7,8 @@ Requirements
   - Target framework: .NET Framework 4.6.1
   - C# WPF App
   - Visual Studio 2017
+  - NuGet: InteractiveDataDisplay.WPF (Graphs)
+  - NuGet: CenterSpace.NMath (Least Square Solution)
 
 Program supports features
 -----
@@ -19,6 +21,8 @@ How to use
 Examples
 -----
 <img src="https://github.com/kruherson1337/HDR/blob/master/example.jpg?raw=true" alt="Example"/>
+With CLAHE applied - Window size = 220, Contrast Limit = 5
+<img src="https://github.com/kruherson1337/HDR/blob/master/exampleCLAHE.jpg?raw=true" alt="Example"/>
 
 References
 -----
