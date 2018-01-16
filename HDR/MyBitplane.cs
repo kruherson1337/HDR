@@ -2,27 +2,27 @@
 {
     public class MyBitplane
     {
-        public int Width { get; set; }
-        public int Height { get; set; }
+        public int width { get; set; }
+        public int height { get; set; }
 
-        public byte[,] PixelData { get; set; }
+        public byte[,] data { get; set; }
         
         public MyBitplane(int w, int h)
         {
-            Width = w;
-            Height = h;
+            width = w;
+            height = h;
 
-            PixelData = new byte[Height, Width];
+            data = new byte[height, width];
         }
 
         public byte GetPixel(int x, int y)
         {
-            return PixelData[y, x];
+            return data[y, x];
         }
 
         public void SetPixel(int x, int y, byte value)
         {
-            PixelData[y, x] = value;
+            data[y, x] = value;
         }
     }
 }

@@ -8,48 +8,43 @@ namespace HDR
 {
     public class MyImage
     {
-        public int Width { get; set; }
-        public int Height { get; set; }
-        public int NumCh { get; set; }
-        public double ExposureTime { get; set; }
-        public string ImageFileName { get; set; }
-
-        public List<MyBitplane> Bitplane = new List<MyBitplane>();
+        public int width { get; set; }
+        public int height { get; set; }
+        public int numCh { get; set; }
+        public double exposureTime { get; set; }
+        public List<MyBitplane> bitplane { get; set; }
 
         public MyImage(Bitmap bmp)
         {
-            Width = bmp.Width;
-            Height = bmp.Height;
-            ExposureTime = getExposureTime(bmp);
-
-            Console.WriteLine("Width: " + Width);
-            Console.WriteLine("Height: " + Height);
-            Console.WriteLine("Exposure: " + ExposureTime.ToString());
+            width = bmp.Width;
+            height = bmp.Height;
+            exposureTime = getExposureTime(bmp);
 
             BitmapData bd = bmp.LockBits(new Rectangle(0, 0, bmp.Width, bmp.Height),
                   ImageLockMode.ReadOnly, bmp.PixelFormat);
 
             switch (bmp.PixelFormat)
             {
-                case PixelFormat.Format8bppIndexed: NumCh = 1; break;
-                case PixelFormat.Format16bppGrayScale: NumCh = 2; break;
-                case PixelFormat.Format24bppRgb: NumCh = 3; break;
-                case PixelFormat.Format32bppArgb: NumCh = 4; break;
-                default: NumCh = 1; break;
+                case PixelFormat.Format8bppIndexed: numCh = 1; break;
+                case PixelFormat.Format16bppGrayScale: numCh = 2; break;
+                case PixelFormat.Format24bppRgb: numCh = 3; break;
+                case PixelFormat.Format32bppArgb: numCh = 4; break;
+                default: numCh = 1; break;
             }
 
-            byte[] pixels = new byte[bmp.Width * bmp.Height * NumCh];
+            byte[] pixels = new byte[bmp.Width * bmp.Height * numCh];
             Marshal.Copy(bd.Scan0, pixels, 0, pixels.Length);
             bmp.UnlockBits(bd);
 
-            for (int i = 0; i < NumCh; i++)
-                Bitplane.Add(new MyBitplane(Width, Height));
+            bitplane = new List<MyBitplane>();
+            for (int i = 0; i < numCh; i++)
+                bitplane.Add(new MyBitplane(width, height));
 
             int pos = 0;
-            for (int j = 0; j < Height; ++j)
-                for (int i = 0; i < Width; ++i)
-                    for (int ch = 0; ch < NumCh; ++ch)
-                        Bitplane[ch].SetPixel(i, j, pixels[pos++]);
+            for (int j = 0; j < height; ++j)
+                for (int i = 0; i < width; ++i)
+                    for (int ch = 0; ch < numCh; ++ch)
+                        bitplane[ch].SetPixel(i, j, pixels[pos++]);
 
 
             bmp.Dispose();
@@ -57,37 +52,37 @@ namespace HDR
 
         public MyImage(int w, int h, int ch, double expoTime)
         {
-            NumCh = ch;
-            Width = w;
-            Height = h;
-            ImageFileName = "";
-            ExposureTime = expoTime;
+            numCh = ch;
+            width = w;
+            height = h;
+            exposureTime = expoTime;
 
-            for (int i = 0; i < NumCh; i++)
-                Bitplane.Add(new MyBitplane(Width, Height));
+            bitplane = new List<MyBitplane>();
+            for (int i = 0; i < numCh; ++i)
+                bitplane.Add(new MyBitplane(width, height));
         }
 
         public Bitmap GetBitmap()
         {
             Bitmap bmp;
-            switch (NumCh)
+            switch (numCh)
             {
-                case 1: bmp = new Bitmap(Width, Height, PixelFormat.Format8bppIndexed); break;
-                case 2: bmp = new Bitmap(Width, Height, PixelFormat.Format16bppGrayScale); break;
-                case 3: bmp = new Bitmap(Width, Height, PixelFormat.Format24bppRgb); break;
-                case 4: bmp = new Bitmap(Width, Height, PixelFormat.Format32bppArgb); break;
-                default: bmp = new Bitmap(Width, Height, PixelFormat.Format8bppIndexed); break;
+                case 1: bmp = new Bitmap(width, height, PixelFormat.Format8bppIndexed); break;
+                case 2: bmp = new Bitmap(width, height, PixelFormat.Format16bppGrayScale); break;
+                case 3: bmp = new Bitmap(width, height, PixelFormat.Format24bppRgb); break;
+                case 4: bmp = new Bitmap(width, height, PixelFormat.Format32bppArgb); break;
+                default: bmp = new Bitmap(width, height, PixelFormat.Format8bppIndexed); break;
             }
-            byte[] pixels = new byte[Width * Height * NumCh];
+            byte[] pixels = new byte[width * height * numCh];
 
             int pos = 0;
-            for (int y = 0; y < Height; ++y)
-                for (int x = 0; x < Width; ++x)
-                    for (int ch = 0; ch < NumCh; ++ch)
-                        pixels[pos++] = (byte)Bitplane[ch].GetPixel(x, y);
+            for (int y = 0; y < height; ++y)
+                for (int x = 0; x < width; ++x)
+                    for (int ch = 0; ch < numCh; ++ch)
+                        pixels[pos++] = (byte)bitplane[ch].GetPixel(x, y);
 
 
-            BitmapData bd = bmp.LockBits(new Rectangle(0, 0, Width, Height), ImageLockMode.ReadWrite, bmp.PixelFormat);
+            BitmapData bd = bmp.LockBits(new Rectangle(0, 0, width, height), ImageLockMode.ReadWrite, bmp.PixelFormat);
 
             Marshal.Copy(pixels, 0, bd.Scan0, pixels.Length);
 
@@ -104,11 +99,11 @@ namespace HDR
         public Pixel[] getSamples(int count, int[] randomX, int[] randomY)
         {
             Pixel[] sample = new Pixel[count];            
-            for (int j = 0; j < count; j++)
+            for (int j = 0; j < count; ++j)
             {
-                byte R = Bitplane[2].GetPixel(randomX[j], randomY[j]);
-                byte G = Bitplane[1].GetPixel(randomX[j], randomY[j]);
-                byte B = Bitplane[0].GetPixel(randomX[j], randomY[j]);
+                byte R = bitplane[2].GetPixel(randomX[j], randomY[j]);
+                byte G = bitplane[1].GetPixel(randomX[j], randomY[j]);
+                byte B = bitplane[0].GetPixel(randomX[j], randomY[j]);
 
                 sample[j] = new Pixel(B, G, R);
             }
@@ -128,6 +123,13 @@ namespace HDR
                 }
             }
             return exposure;
+        }
+
+        public void print()
+        {
+            Console.WriteLine("Width: " + width);
+            Console.WriteLine("Height: " + height);
+            Console.WriteLine("Exposure: " + exposureTime.ToString());
         }
     }
 }

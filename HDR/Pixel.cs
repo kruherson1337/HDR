@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace HDR
+﻿namespace HDR
 {
     public class Pixel
     {

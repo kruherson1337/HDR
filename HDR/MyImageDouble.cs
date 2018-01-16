@@ -6,104 +6,84 @@ namespace HDR
 
     public class MyImageDouble
     {
-        public int Width { get; set; }
-        public int Height { get; set; }
-        public int NumCh { get; set; }
-        public double ExposureTime { get; set; }
-        public string ImageFileName { get; set; }
+        public int width { get; set; }
+        public int height { get; set; }
+        public int numCh { get; set; }
+        public double exposureTime { get; set; }
 
-        public List<MyBitplaneDouble> Bitplane = new List<MyBitplaneDouble>();
+        public List<MyBitplaneDouble> bitplane = new List<MyBitplaneDouble>();
 
-        public MyImageDouble(int w, int h, int ch)
+        public MyImageDouble(int w, int h, int cch)
         {
-            NumCh = ch;
-            Width = w;
-            Height = h;
-            ImageFileName = "";
+            numCh = cch;
+            width = w;
+            height = h;
 
-            for (int i = 0; i < NumCh; i++)
-                Bitplane.Add(new MyBitplaneDouble(Width, Height));
+            for (int ch = 0; ch < numCh; ++ch)
+                bitplane.Add(new MyBitplaneDouble(width, height));
         }
 
         public MyImageDouble(MyBitplane myBitplane, double expoTime)
         {
-            NumCh = 1;
-            Width = myBitplane.Width;
-            Height = myBitplane.Height;
-            ImageFileName = "";
-            ExposureTime = expoTime;
-
-            for (int i = 0; i < NumCh; i++)
-                Bitplane.Add(new MyBitplaneDouble(myBitplane));
+            numCh = 1;
+            width = myBitplane.width;
+            height = myBitplane.height;
+            exposureTime = expoTime;
+            bitplane.Add(new MyBitplaneDouble(myBitplane));
         }
 
         public MyImage ToMyImage()
         {
-            MyImage myImage = new MyImage(Width, Height, NumCh, 0.0);
-            for (int y = 0; y < Height; ++y)
-                for (int x = 0; x < Width; ++x)
-                    for (int ch = 0; ch < NumCh; ch++)
-                    {
-                        myImage.Bitplane[ch].SetPixel(x, y, (byte)Math.Round(Bitplane[ch].GetPixel(x, y)));
-                    }
+            MyImage myImage = new MyImage(width, height, numCh, 0.0);
+            for (int y = 0; y < height; ++y)
+                for (int x = 0; x < width; ++x)
+                    for (int ch = 0; ch < numCh; ++ch)
+                        myImage.bitplane[ch].SetPixel(x, y, (byte)Math.Round(bitplane[ch].GetPixel(x, y)));
             return myImage;
         }
 
         public void log()
         {
-            for (int y = 0; y < Height; ++y)
-                for (int x = 0; x < Width; ++x)
-                    for (int ch = 0; ch < NumCh; ch++)
-                        Bitplane[ch].SetPixel(x, y, Math.Log(Bitplane[ch].GetPixel(x, y)));
+            for (int ch = 0; ch < numCh; ++ch)
+                bitplane[ch].log();
         }
 
         public void multiply(double value)
         {
-            for (int y = 0; y < Height; ++y)
-                for (int x = 0; x < Width; ++x)
-                    for (int ch = 0; ch < NumCh; ch++)
-                        Bitplane[ch].SetPixel(x, y, Bitplane[ch].GetPixel(x, y) * value);
+            for (int ch = 0; ch < numCh; ++ch)
+                bitplane[ch].multiply(value);
         }
 
         public void divide(double value)
         {
-            for (int y = 0; y < Height; ++y)
-                for (int x = 0; x < Width; ++x)
-                    for (int ch = 0; ch < NumCh; ch++)
-                        Bitplane[ch].SetPixel(x, y, Bitplane[ch].GetPixel(x, y) / value);
+            for (int ch = 0; ch < numCh; ++ch)
+                bitplane[ch].divide(value);
         }
 
         public void normalize()
         {
             double min = findMin();
             double max = findMax();
-            for (int y = 0; y < Height; ++y)
-                for (int x = 0; x < Width; ++x)
-                    for (int ch = 0; ch < NumCh; ch++)
-                        Bitplane[ch].SetPixel(x, y, Bitplane[ch].GetPixel(x, y) - min / max - min);
+            for (int ch = 0; ch < numCh; ++ch)
+                bitplane[ch].normalize(min, max);
         }
 
         public double findMin()
         {
             double min = Double.MaxValue;
-            for (int y = 0; y < Height; ++y)
-                for (int x = 0; x < Width; ++x)
-                    for (int ch = 0; ch < NumCh; ch++)
-                        if (min > Bitplane[ch].GetPixel(x, y))
-                            min = Bitplane[ch].GetPixel(x, y);
+            for (int ch = 0; ch < numCh; ++ch)
+                if (min > bitplane[ch].findMin())
+                    min = bitplane[ch].findMin();
             return min;
         }
 
         public double findMax()
         {
             double max = Double.MinValue;
-            for (int y = 0; y < Height; ++y)
-                for (int x = 0; x < Width; ++x)
-                    for (int ch = 0; ch < NumCh; ch++)
-                        if (max < Bitplane[ch].GetPixel(x, y))
-                            max = Bitplane[ch].GetPixel(x, y);
+            for (int ch = 0; ch < numCh; ++ch)
+                if (max < bitplane[ch].findMax())
+                    max = bitplane[ch].findMax();
             return max;
         }
-
     }
 }
