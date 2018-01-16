@@ -12,7 +12,8 @@ Requirements
 
 Program supports features
 -----
-  - Create HDR image from multiply images with different exposure times
+  - Create HDR image from multiply images with different exposure times. Note: not displayed as pure HDR
+  - Apply CLAHE on HDR image
    
 How to use
 -----
