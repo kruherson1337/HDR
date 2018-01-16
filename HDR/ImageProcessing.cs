@@ -4,9 +4,13 @@ using System.Threading.Tasks;
 
 namespace HDR
 {
-    class ImageProcessing
+    public class ImageProcessing
     {
-        internal static HDResult HDR(MyImage[] images, int smoothfactor, int samples)
+        // ============================================
+        // HDR
+        // ============================================
+
+        public static HDResult HDR(MyImage[] images, int smoothfactor, int samples)
         {
             // Prepare data
             int imagesCount = images.Length;
@@ -203,6 +207,202 @@ namespace HDR
             for (int i = 0; i < logTimes.Length; ++i)
                 logTimes[i] = Math.Log(imagesChannels[i].exposureTime);
             return logTimes;
+        }
+
+        // ============================================
+        // CLAHE
+        // ============================================
+
+        /// <summary>
+        /// Contrast Limited Adaptive Histogram Equalization implementation
+        /// </summary>
+        /// <param name="bitplane">bitplane of current image</param>
+        /// <param name="windowSize">size of window</param>
+        /// <param name="contrastLimit">Contrast limit param</param>
+        public static void CLAHE(ref MyBitplane bitplane, int windowSize, double contrastLimit)
+        {
+            // Prepare data
+            MyBitplane newBitplane = new MyBitplane(bitplane.width, bitplane.height);
+            MyBitplane window = new MyBitplane(windowSize, windowSize);
+
+            int x;
+            int y;
+            for (y = 0; y < bitplane.height; ++y)
+            {
+                for (x = 0; x < bitplane.width; ++x)
+                {
+                    // Create window
+                    CreateWindow(ref bitplane, windowSize, ref window, y, x);
+
+                    // Contrast Limit on window
+                    CL(ref window, contrastLimit);
+
+                    // Histogram equalization on window
+                    HE(ref window);
+
+                    // Replace pixel from windowHE
+                    newBitplane.SetPixel(x, y, window.GetPixel(windowSize / 2, windowSize / 2));
+                }
+            }
+
+            // Copy
+            for (y = 0; y < bitplane.height; ++y)
+                for (x = 0; x < bitplane.width; ++x)
+                    bitplane.SetPixel(x, y, newBitplane.GetPixel(x, y));
+        }
+
+        /// <summary>
+        /// Histogram Equalization
+        /// </summary>
+        /// <param name="bitplane">bitplane of current image</param>
+        private static void HE(ref MyBitplane bitplane)
+        {
+            // Histogram
+            double[] histogram = calculateHistogram(bitplane);
+
+            // Probability
+            double totalElements = bitplane.width * bitplane.height;
+            double[] probability = new double[256];
+            int i;
+            for (i = 0; i < 256; i++)
+                probability[i] = histogram[i] / totalElements;
+
+            // Comulative probability
+            double[] comulativeProbability = calculateComulativeFrequency(probability);
+
+            // Multiply comulative probability by 256
+            int[] floorProbability = new int[256];
+            for (i = 0; i < 256; i++)
+                floorProbability[i] = (int)Math.Floor(comulativeProbability[i] * 255);
+
+            // Transform old value to new value
+            int x;
+            for (int y = 0; y < bitplane.height; y++)
+                for (x = 0; x < bitplane.width; x++)
+                    bitplane.SetPixel(x, y, (byte)floorProbability[bitplane.GetPixel(x, y)]);
+        }
+
+        /// <summary>
+        /// Contrast Limited implementation
+        /// </summary>
+        /// <param name="bitplane">bitplane of current image</param>
+        /// <param name="contrastLimit">contrast limit</param>
+        private static void CL(ref MyBitplane bitplane, double contrastLimit)
+        {
+            double cl = (contrastLimit * (bitplane.width * bitplane.height)) / 256;
+            double top = cl;
+            double bottom = 0;
+            double SUM = 0;
+            int i;
+
+            // Histogram
+            double[] histogram = calculateHistogram(bitplane);
+
+            while (top - bottom > 1)
+            {
+                double middle = (top + bottom) / 2;
+                SUM = 0;
+                for (i = 0; i < 256; i++)
+                    if (histogram[i] > middle)
+                        SUM += histogram[i] - middle;
+                if (SUM > (cl - middle) * 256)
+                    top = middle;
+                else
+                    bottom = middle;
+            }
+
+            double clipLevel = Math.Round(bottom + (SUM / 256));
+
+            double L = cl - clipLevel;
+            for (i = 0; i < 256; i++)
+                if (histogram[i] >= clipLevel)
+                    histogram[i] = clipLevel;
+                else
+                    histogram[i] += L;
+
+            double perBin = SUM / 256;
+
+            for (i = 0; i < 256; i++)
+                histogram[i] += perBin;
+
+            histogram = calculateComulativeFrequency(histogram);
+            int[] finalFreq = new int[256];
+            double min = Utils.findMin(histogram);
+            for (i = 0; i < 256; i++)
+                finalFreq[i] = (int)((histogram[i] - min) / ((bitplane.width * bitplane.height) - 2) * 255);
+
+            int x;
+            for (int y = 0; y < bitplane.height; ++y)
+                for (x = 0; x < bitplane.width; ++x)
+                    bitplane.SetPixel(x, y, (byte)finalFreq[bitplane.GetPixel(x, y)]);
+
+        }
+
+        /// <summary>
+        /// Create window on current bitplane
+        /// Edges are mirrored
+        /// </summary>
+        /// <param name="bitplane">bitplane of current image</param>
+        /// <param name="windowSize">size of window</param>
+        /// <param name="window">window reference filled from bitmap</param>
+        /// <param name="y">current y position on bitplane</param>
+        /// <param name="x">current x position on bitplane</param>
+        private static void CreateWindow(ref MyBitplane bitplane, int windowSize, ref MyBitplane window, int y, int x)
+        {
+            int jIndex = 0;
+            int iIndex;
+            int i;
+            for (int j = 0 - (windowSize / 2); j < (windowSize / 2); ++j)
+            {
+                iIndex = 0;
+                for (i = 0 - (windowSize / 2); i < (windowSize / 2); ++i)
+                {
+                    int xx = x + i;
+                    if (xx < 0)
+                        xx = Math.Abs(xx);
+                    if (xx >= bitplane.width)
+                        xx = (bitplane.width - 1) + ((bitplane.width) - (xx + windowSize));
+                    int yy = y + j;
+                    if (yy < 0)
+                        yy = Math.Abs(yy);
+                    if (yy >= bitplane.height)
+                        yy = (bitplane.height - 1) + ((bitplane.height) - (yy + windowSize));
+
+                    window.SetPixel(iIndex, jIndex, bitplane.GetPixel(xx, yy));
+                    ++iIndex;
+                }
+                ++jIndex;
+            }
+        }
+
+        /// <summary>
+        /// Calculates histogram based on input bitplane
+        /// </summary>
+        /// <param name="bitplane">bitplane of current image</param>
+        /// <returns>double array histogram of input bitplane</returns>
+        public static double[] calculateHistogram(MyBitplane bitplane)
+        {
+            double[] histogram = new double[256];
+            int x;
+            for (int y = 0; y < bitplane.height; ++y)
+                for (x = 0; x < bitplane.width; ++x)
+                    ++histogram[bitplane.GetPixel(x, y)];
+            return histogram;
+        }
+
+        /// <summary>
+        /// Calculate comulative frequency of input array
+        /// </summary>
+        /// <param name="array">double array of frequencies</param>
+        /// <returns>double array for comulative frequencies</returns>
+        public static double[] calculateComulativeFrequency(double[] array)
+        {
+            int size = array.Length;
+            double[] comulativeFreq = new double[size];
+            comulativeFreq[0] = array[0];
+            for (int i = 1; i < size; ++i)
+                comulativeFreq[i] = comulativeFreq[i - 1] + array[i];
+            return comulativeFreq;
         }
     }
 }

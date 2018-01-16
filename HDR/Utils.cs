@@ -97,5 +97,17 @@ namespace HDR
                 Stretch = Stretch.Fill
             };
         }
+
+        /// <summary>
+        /// Find min value in array
+        /// </summary>
+        public static double findMin(double[] array)
+        {
+            double min = double.MaxValue;
+            foreach (double value in array)
+                if (value < min)
+                    min = value;
+            return min;
+        }
     }
 }

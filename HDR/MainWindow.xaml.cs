@@ -1,12 +1,10 @@
 ﻿
-using LiveCharts;
-using LiveCharts.Wpf;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Controls;
 using System.Windows.Forms;
 
 namespace HDR
@@ -16,9 +14,7 @@ namespace HDR
     /// </summary>
     public partial class MainWindow : Window
     {
-        public SeriesCollection SeriesCollection { get; set; }
-        public string[] Labels { get; set; }
-        public Func<double, string> YFormatter { get; set; }
+        private MyImageDouble HDRImage;
 
         public MainWindow()
         {
@@ -42,8 +38,8 @@ namespace HDR
                 MyImage[] images = loadImages(dialog.FileNames);
 
                 // Get parameters
-                int smoothfactor = getParamater(textboxSmoothFactor);
-                int samples = getParamater(textboxSample);
+                int smoothfactor = (int)getParamater(textboxSmoothFactor);
+                int samples = (int)getParamater(textboxSample);
 
                 // Display images
                 drawImages(images);
@@ -52,16 +48,52 @@ namespace HDR
                 HDResult hdrResult = ImageProcessing.HDR(images, smoothfactor, samples);
 
                 // Draw response graphs
-                drawGraph(hdrResult.response[0]);
+                drawReponsesGraph(hdrResult.response);
+
+                // Save HDR image
+                HDRImage = hdrResult.HDR;
+
+                MyImage tempImage = HDRImage.ToMyImage();
 
                 // Show HDR image
-                hdrImage.Source = Utils.getSource(hdrResult.HDR.ToMyImage().GetBitmap());
+                processedImage.Source = Utils.getSource(tempImage.GetBitmap());
+
+                // Create histograms
+                displayHistograms(tempImage);
             }
 
             watch.Stop();
             string timeTaken = String.Format(" HDR {0} ms", watch.ElapsedMilliseconds.ToString());
             Console.WriteLine(timeTaken);
             labelOutput.Content += timeTaken;
+        }
+
+        private void buttonCLAHE_Click(object sender, RoutedEventArgs e)
+        {
+            if (HDRImage == null)
+                System.Windows.MessageBox.Show("No HDR image generated", "Error", MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+
+            // Get parameters
+            int windowSize = (int)getParamater(textboxAHEWindowSize);
+            double contrastLimit = getParamater(textboxClipLimit);
+
+            // Convert to MyImage
+            MyImage myImage = HDRImage.ToMyImage();
+
+            // Calculate each channel separated
+
+            // Do paralel image process on each channel 
+            Parallel.ForEach(myImage.bitplane, (bitplane, state, ch) =>
+            {
+                // Process current channel
+                ImageProcessing.CLAHE(ref bitplane, windowSize, contrastLimit);
+            });
+            
+            // Create histograms
+            displayHistograms(myImage);
+
+            // Draw image on screen
+            processedImage.Source = Utils.getSource(myImage.GetBitmap());
         }
 
         private MyImage[] loadImages(string[] fileNames)
@@ -96,30 +128,61 @@ namespace HDR
             }
         }
 
-        private void drawGraph(double[] values)
+        private void drawReponsesGraph(double[][] responses)
         {
-            string[] labels = new string[256];
+            int[] y = new int[256];
             for (int i = 0; i < 256; i++)
-                labels[i] = i.ToString();
+                y[i] = i;
 
-            SeriesCollection = new SeriesCollection
-            {
-                new LineSeries
-                {
-                    Values = new ChartValues<double> (values),
-                    PointGeometry = null
-                }
-            };
-
-            Labels = labels;
-            YFormatter = value => value.ToString();
-
-            DataContext = this;
+            channelR.Plot(responses[0], y); // Red
+            channelG.Plot(responses[1], y); // Green
+            channelB.Plot(responses[2], y); // Blue
         }
 
-        private int getParamater(System.Windows.Controls.TextBox textbox)
+        private void drawHistogram(double[][] responses)
         {
-            return Int32.Parse(textbox.Text);
+            int[] y = new int[256];
+            for (int i = 0; i < 256; i++)
+                y[i] = i;
+
+            channelR.Plot(responses[0], y); // Red
+            channelG.Plot(responses[1], y); // Green
+            channelB.Plot(responses[2], y); // Blue
+        }
+
+        private void displayHistograms(MyImage myImage)
+        {
+            int[] y = new int[256];
+            for (int i = 0; i < 256; i++)
+                y[i] = i;
+            
+            // Calculate each channel separated
+            double[][] histograms = new double[myImage.numCh][];
+            double[][] comulativeFrequencies = new double[myImage.numCh][];
+
+            // Do paralel image process on each channel 
+            Parallel.ForEach(myImage.bitplane, (bitplane, state, ch) =>
+            {
+                // Calculate Histogram
+                histograms[ch] = ImageProcessing.calculateHistogram(bitplane);
+
+                // Calculate Comulative Histogram
+                comulativeFrequencies[ch] = ImageProcessing.calculateComulativeFrequency(histograms[ch]);
+            });
+
+            // Draw graphs
+            histogramR.PlotBars(histograms[2]);
+            histogramG.PlotBars(histograms[1]);
+            histogramB.PlotBars(histograms[0]);
+
+            comulativeHistogramR.PlotY(comulativeFrequencies[2]);
+            comulativeHistogramG.PlotY(comulativeFrequencies[1]);
+            comulativeHistogramB.PlotY(comulativeFrequencies[0]);
+        }
+
+        private double getParamater(System.Windows.Controls.TextBox textbox)
+        {
+            return Double.Parse(textbox.Text);
         }
     }
 }
