@@ -2,6 +2,10 @@
 
 HDR - Recovering High Dynamic Range Radiance Maps from Photographs C# .NET Framework - 2018
 
+Help
+-----
+More on algorithm find in [HDR Article](http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.463.6496&rep=rep1&type=pdf)
+
 Requirements
 -----
   - Target framework: .NET Framework 4.6.1
