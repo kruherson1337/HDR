@@ -12,12 +12,13 @@ Requirements
 
 Program supports features
 -----
-  - Create HDR image from multiply images with different exposure times. Note: not displayed as pure HDR
+  - Create HDR image from multiply images with different exposure times. Note: not displayed as pure HDR, values rounded
   - Apply CLAHE on HDR image
    
 How to use
 -----
   - Load images with different exposure times
+  - Apply CLAHE after HDR image generated
   
 Examples
 -----
